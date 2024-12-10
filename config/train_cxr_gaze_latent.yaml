@@ -1,0 +1,36 @@
+exp_dir: experiments_gaze
+trial: 4 # change this trial and run python /home/ptthang/GenXAI/GenXAI/notes/chapter_5_baseline/section_3/convert_json_whole.py until you have enough.
+module: GenXAI_latent
+debug: False
+
+dataset_dir: datasets
+ckpt_zoo_dir: checkpoints
+# venv_path: venv/bin/activate  # If using a SLURM cluster, uncomment this line.
+load_pretrained: True
+
+devices: 1
+num_nodes: 1
+num_workers: 16
+strategy: ddp_find_unused_parameters_true
+
+definition: GenXAIMIMICXRChen
+
+encoder_lr: 5e-5
+decoder_lr: 5e-5
+mbatch_size: 32  # 4 * 4 devices = mini-batch size of 16.
+every_n_epochs: 1
+max_epochs: 100
+
+monitor: 'val_chen_bleu_4'
+monitor_mode: 'max'
+precision: 16
+decoder_max_len: 128
+num_test_beams: 4
+
+enable_progress_bar: True
+weights_summary: 'full'
+
+early_stopping: True
+patience: 300
+min_delta: 1e-4
+deterministic: False

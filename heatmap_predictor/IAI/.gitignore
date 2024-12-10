@@ -1,0 +1,70 @@
+# output dir
+output
+instant_test_output
+inference_test_output
+
+
+# *.json
+*.diff
+*.jpg
+!/projects/DensePose/doc/images/*.jpg
+!docs/static/images/*.jpg
+# compilation and distribution
+__pycache__
+_ext
+*.pyc
+*.pyd
+*.so
+*.dll
+*.egg-info/
+build/
+dist/
+wheels/
+
+# pytorch/python/numpy formats
+*.pth
+*.pkl
+*.npy
+*.ts
+model_ts*.txt
+
+# ipython/jupyter notebooks
+# *.ipynb
+**/.ipynb_checkpoints/
+
+# Editor temporaries
+*.swn
+*.swo
+*.swp
+*~
+
+# editor settings
+.idea
+_darcs
+
+# project dirs
+/detectron2/model_zoo/configs
+/datasets/*
+!/datasets/*.*
+/projects/*/datasets
+/models
+/snippet
+
+.history
+.env
+
+wandb
+amlt
+env/
+notes/biomed_scripts/biomed-clip-share
+vis/
+tmps/ 
+*.pt
+IAI_heatmaps_cardiac_left_right_directional/
+*png
+*tar.gz
+*.zip
+*disk_ptthang
+*tar.gz
+TransUNet
+transuner*

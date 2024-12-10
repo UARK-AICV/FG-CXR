@@ -1,0 +1,30 @@
+_BASE_: Base-iai.yaml
+DATASETS:
+  TRAIN: ("IAI_gaze_train_e2e_v2",)
+  TEST: ('IAI_gaze_test_e2e_v2',)
+MODEL:
+  META_ARCHITECTURE: "IAIBiomedCLIPL2_e2e_v2"
+  IAI:
+    NUM_CLASSES: 2 # two classes: not interest and interest.
+    SIZE_DIVISIBILITY: 0
+    L2_WEIGHT: 1.0
+    L1_WEIGHT: 0.0
+    CLASS_WEIGHT: 2.0
+    DICE_WEIGHT: 1.0
+    MASK_WEIGHT: 1.0
+    HEATMAPS_WEIGHT: 1.0
+  SIDE_ADAPTER:
+    NAME: "RegionwiseSideAdapterNetworkFuseTextL2_v2"
+INPUT:
+  DATASET_MAPPER_NAME: "iai_gaze_mapper_e2e_v2"
+SOLVER:
+  IMS_PER_BATCH: 1
+  BACKBONE_MULTIPLIER: 1.0
+  # MAX_ITER: 200000
+  # MAX_ITER: 500 # 200000
+# TEST:
+#   EVAL_PERIOD: 50
+DATALOADER:
+  NUM_WORKERS: 8
+DEBUG_MODE: 0
+OUTPUT_DIR: "data_thang_personal/IAI/output/iai_debug"
