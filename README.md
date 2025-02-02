@@ -11,7 +11,7 @@ The FG-CXR dataset includes:
 - Corresponding radiology reports
 - Gaze data from experienced radiologists
 
-For more details on the dataset structure and access, please contact the corresponding author.
+Due to license of the original data, please contact the corresponding author at tp030@uark.edu for more details on the dataset structure and access. They will answer within 24-48 hours.
 
 ## TODO:
 - [ ] Code inference
