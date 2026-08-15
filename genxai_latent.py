@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 import einops
 import torch
@@ -52,22 +53,20 @@ class GenXAIMIMICXRChen(LightningModule):
         self.num_workers = num_workers
         self.debug = debug
 
-        # Paths:
-        # self.labels_file_path = "/home/vuonghn/research/dataset/medical/sub_mimic_gaze/annotation_train_val_reportJSON_overfit.json"
-        # This file will be read in def setup(self, stage=None)
+        data_root = Path(dataset_dir)
         if self.debug:
-            self.labels_file_path = "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/debug_split_with_heatmap.json"
+            self.labels_file_path = data_root / "debug_split_with_heatmap.json"
         else:
-            self.labels_file_path = "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/full_split_with_heatmap_B4_0.73.json"
-        self.dataset_dir = "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/images"
-        self.heatmap_dataset_dir = "/home/ptthang/GenXAI/GenXAI/dataset/medical/current_method/output/iai_feb_24/visualization/heatmaps"
+            self.labels_file_path = data_root / "full_split_with_heatmap.json"
+        self.dataset_dir = str(data_root / "images")
+        self.heatmap_dataset_dir = str(data_root / "predicted_heatmaps")
         self.chen_tokenizer = TokenizerChen(
             ann_path=self.labels_file_path,
             threshold=3,
         )
         self.chen_max_seq_length = 60
         self.left_right_heart_token = torch.load(
-            "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/directional_text_features.pt"
+            data_root / "directional_text_features.pt"
         )
         self.left_right_heart_token_projection = torch.nn.Linear(512, 768)
         self.map_direction = {

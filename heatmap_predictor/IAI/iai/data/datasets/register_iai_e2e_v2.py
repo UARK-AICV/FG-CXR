@@ -6,13 +6,11 @@ from detectron2.data import DatasetCatalog, MetadataCatalog
 from torchvision import transforms
 
 
-def IAI_gaze_function(df):
+def IAI_gaze_function(df, root):
     # change this function into for looping all image type, if there is left then add left item, if there is right then add right item, if there is cardiac then add cardiac item, and finally add the static heatmap item
-    root_image_path = "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/images"
-    root_mask_path = (
-        "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/masks_from_heatmaps"
-    )
-    root_heatmap_path = "/home/ptthang/GenXAI/GenXAI/dataset/medical/data/heatmaps"
+    root_image_path = os.path.join(root, "images")
+    root_mask_path = os.path.join(root, "masks_from_heatmaps")
+    root_heatmap_path = os.path.join(root, "heatmaps")
 
     d_dicts = []
     for k, v in df.items():
@@ -37,15 +35,10 @@ def IAI_gaze_function(df):
 def register_all_iai(root):
     dset = "debug"
     dset = "full"
-    train_df = json.load(
-        open(f"/home/ptthang/GenXAI/GenXAI/dataset/medical/data/{dset}.json")
-    )
-    dev_df = json.load(
-        open(f"/home/ptthang/GenXAI/GenXAI/dataset/medical/data/{dset}.json")
-    )
-    test_df = json.load(
-        open(f"/home/ptthang/GenXAI/GenXAI/dataset/medical/data/{dset}.json")
-    )
+    annotation_path = os.path.join(root, f"{dset}.json")
+    with open(annotation_path) as handle:
+        train_df = json.load(handle)
+    test_df = train_df
 
     _, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(
         "hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"
@@ -61,10 +54,10 @@ def register_all_iai(root):
         data_name = f"IAI_gaze_{name}_e2e_v2"
         DatasetCatalog.register(
             data_name,
-            lambda x=df: IAI_gaze_function(x),
+            lambda x=df: IAI_gaze_function(x, root),
         )
         MetadataCatalog.get(data_name).set(
-            label_root=f"/home/ptthang/GenXAI/GenXAI/dataset/medical/data/{dset}.json",
+            label_root=annotation_path,
             evaluator_type="IAI_gaze_e2e_v2",
             ignore_label=255,
             thing_classes=["NotInterest", "Interest"],
@@ -73,5 +66,5 @@ def register_all_iai(root):
         )
 
 
-_root = os.getenv("DETECTRON2_DATASETS", "datasets")
+_root = os.getenv("DETECTRON2_DATASETS", "data/fg_cxr")
 register_all_iai(_root)

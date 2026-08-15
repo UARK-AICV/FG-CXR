@@ -1,9 +1,9 @@
 exp_dir: experiments_gaze
-trial: 4 # change this trial and run python /home/ptthang/GenXAI/GenXAI/notes/chapter_5_baseline/section_3/convert_json_whole.py until you have enough.
+trial: 4
 module: GenXAI_latent
 debug: False
 
-dataset_dir: datasets
+dataset_dir: data/fg_cxr
 ckpt_zoo_dir: checkpoints
 # venv_path: venv/bin/activate  # If using a SLURM cluster, uncomment this line.
 load_pretrained: True

@@ -170,3 +170,14 @@ processed_medical_data/
 reflacx_heatmap_negative/
 *.zip
 dataset/medical
+
+# FG-CXR archives, derived manifests/caches, and experiment artifacts.
+data/
+outputs/
+docs/
+splits/
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.safetensors

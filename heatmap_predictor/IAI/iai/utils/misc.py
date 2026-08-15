@@ -32,8 +32,6 @@ def read_gt_heatmap(heatmap_path, preprocess_heatmap, debug_mode=0):
             reflacx_id = heatmap_path.split('/')[-1].split('.')[0]
         saved_dir = 'tmps'
         os.makedirs(saved_dir, exist_ok=True)
-    if '/home/tp030/SAMed' in heatmap_path:
-        heatmap_path = heatmap_path.replace('/home/tp030/SAMed', '/home/tp030/IAI')
     gt_heatmap = Image.open(heatmap_path).convert('L') # i convert it so that i can transforms.
     gt_heatmap = preprocess_heatmap(gt_heatmap)
     gt_heatmap_bf = gt_heatmap.clone() # the raw logits

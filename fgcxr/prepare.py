@@ -1,0 +1,153 @@
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+from pathlib import Path
+
+from .constants import REGIONS
+from .utils import write_json
+
+
+def read_reflacx_mapping(path: Path | None) -> dict[str, str]:
+    if path is None:
+        return {}
+    with path.open(newline="") as handle:
+        rows = csv.DictReader(handle)
+        if rows.fieldnames is None or "id" not in rows.fieldnames or "dicom_id" not in rows.fieldnames:
+            raise ValueError(f"{path} must contain id and dicom_id columns")
+        return {
+            row["id"].strip(): row["dicom_id"].strip()
+            for row in rows
+            if row.get("id") and row.get("dicom_id")
+        }
+
+
+def stable_rank(identifier: str, namespace: str) -> str:
+    return hashlib.sha256(f"{namespace}:{identifier}".encode()).hexdigest()
+
+
+def build_manifest(
+    data_root: Path,
+    output: Path,
+    reflacx_metadata: Path | None,
+) -> dict:
+    annotations = json.loads((data_root / "full.json").read_text())
+    reflacx_mapping = read_reflacx_mapping(reflacx_metadata)
+
+    studies = []
+    missing_images: list[str] = []
+    missing_heatmaps: list[str] = []
+    for study_id, annotation in annotations.items():
+        released_dicom_id = annotation["dicom_id"]
+        dicom_id = reflacx_mapping.get(study_id, released_dicom_id)
+        image = data_root / "images" / f"{dicom_id}.jpg"
+        if not image.is_file():
+            missing_images.append(study_id)
+
+        report_by_region = dict(zip(annotation["type"], annotation["sentence"], strict=True))
+        region_records = []
+        for region in REGIONS:
+            region_key = region.replace(" ", "_")
+            candidates = (
+                data_root / "heatmaps" / f"{study_id}_{region_key}.png",
+                data_root / "heatmaps_reflacx" / f"{study_id}_{region_key}.png",
+            )
+            heatmap = next((candidate for candidate in candidates if candidate.is_file()), None)
+            if heatmap is None:
+                missing_heatmaps.append(f"{study_id}:{region}")
+                heatmap = candidates[0]
+            region_records.append(
+                {
+                    "name": region,
+                    "sentence": report_by_region[region].strip(),
+                    "heatmap": str(heatmap.relative_to(data_root)),
+                }
+            )
+
+        studies.append(
+            {
+                "study_id": study_id,
+                "dicom_id": dicom_id,
+                "image": str(image.relative_to(data_root)),
+                "anatomy_mask": f"masks/{study_id}_mask.png",
+                "regions": region_records,
+            }
+        )
+
+    if missing_images:
+        sample = ", ".join(missing_images[:5])
+        raise FileNotFoundError(
+            f"{len(missing_images)} images cannot be resolved (for example {sample}). "
+            "The released REFLACX annotations use P300 IDs while images use DICOM IDs; "
+            "pass --reflacx-metadata with the REFLACX metadata CSV."
+        )
+    if missing_heatmaps:
+        raise FileNotFoundError(f"Missing {len(missing_heatmaps)} heatmaps; first: {missing_heatmaps[0]}")
+
+    # Nine DICOMs occur in both source subsets. Assign whole DICOM groups so the
+    # same radiograph can never cross a split boundary. Stable hashing makes the
+    # split reproducible without publishing a file of restricted study IDs.
+    by_dicom: dict[str, list[dict]] = {}
+    for study in studies:
+        by_dicom.setdefault(study["dicom_id"], []).append(study)
+    ordered_groups = sorted(
+        by_dicom.values(),
+        key=lambda group: stable_rank(group[0]["dicom_id"], "fgcxr-clean-v2"),
+    )
+
+    def take_groups(groups: list[list[dict]], target: int) -> tuple[list[list[dict]], list[list[dict]]]:
+        chosen: list[list[dict]] = []
+        remaining: list[list[dict]] = []
+        count = 0
+        for group in groups:
+            if count + len(group) <= target:
+                chosen.append(group)
+                count += len(group)
+            else:
+                remaining.append(group)
+        if count != target:
+            raise RuntimeError(f"Could not construct a group-safe split of {target} studies (got {count})")
+        return chosen, remaining
+
+    test_groups, remainder = take_groups(ordered_groups, 582)
+    val_groups, train_groups = take_groups(remainder, 295)
+    split_assignment = {
+        study["study_id"]: split
+        for split, groups in (("test", test_groups), ("val", val_groups), ("train", train_groups))
+        for group in groups
+        for study in group
+    }
+    for study in studies:
+        study["split"] = split_assignment[study["study_id"]]
+
+    manifest = {
+        "version": 1,
+        "data_root": str(data_root.resolve()),
+        "regions": list(REGIONS),
+        "split_method": "deterministic DICOM-group-safe split generated by fgcxr.prepare",
+        "split_counts": {"train": 2074, "val": 295, "test": 582},
+        "studies": studies,
+    }
+    write_json(manifest, output)
+    return manifest
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Validate FG-CXR and create a reproducible manifest")
+    parser.add_argument("--data-root", type=Path, default=Path("data/fg_cxr"))
+    parser.add_argument("--output", type=Path, default=Path("data/fg_cxr/manifest.json"))
+    parser.add_argument("--reflacx-metadata", type=Path)
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    manifest = build_manifest(args.data_root, args.output, args.reflacx_metadata)
+    print(f"split: {manifest['split_counts']}")
+    print(f"Wrote {len(manifest['studies'])} validated studies to {args.output}")
+
+
+if __name__ == "__main__":
+    main()
